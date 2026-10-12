@@ -1,0 +1,1522 @@
+{
+  "name": "Hr Leave Request",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -3584,
+        608
+      ],
+      "id": "859ee399-6aff-4fa5-9b6b-943fbdc35b2c",
+      "name": "Telegram Trigger",
+      "webhookId": "aa620425-797e-473d-9add-8cdf8910139d",
+      "credentials": {
+        "telegramApi": {
+          "id": "YuHs0tUwuGZ0vatW",
+          "name": "Telegram account 9"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an HR leave assistant on Telegram. Today is {{ $now.format('yyyy-MM-dd') }}.\nGreet the person and ask them to send: employee ID, leave start date, leave end date, and reason. They may send these in any format or across several messages. Convert relative dates (\"next Monday\") to yyyy-MM-dd. Return the employee ID in uppercase.\nIf anything is missing, set status \"incomplete\" and put a short, friendly question in \"reply\". When you have all four, set status \"complete\" and put a short confirmation in \"reply\" saying the request was received and sent to HR for review. Never say it is approved. Never invent details.\n\nIf a request was already completed earlier in this chat, treat the next message as a brand-new request and ask for fresh details. Never reuse old details."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -3376,
+        608
+      ],
+      "id": "3350a8d2-ef9d-409e-8b86-9665f4515ae2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        -3520,
+        848
+      ],
+      "id": "54de7e4e-fb72-4b8e-9fed-27cd4219f40f",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"status\": \"incomplete\",\n  \"reply\": \"Hi! Please send your employee ID, leave start date, end date and reason.\",\n  \"emp_id\": \"\",\n  \"leave_start\": \"\",\n  \"leave_end\": \"\",\n  \"reason\": \"\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -3136,
+        848
+      ],
+      "id": "b26ab0e3-226d-4faa-b834-25da279eb5dd",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -3328,
+        848
+      ],
+      "id": "e4150966-8068-41e7-b228-b509d0d660ce",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5d6aaf6d-f2aa-47a7-85bf-76283a0b2d35",
+              "leftValue": "={{ $json.output.status }}",
+              "rightValue": "complete",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -3024,
+        608
+      ],
+      "id": "01a025b2-4445-4c31-9a44-dc54d4952afb",
+      "name": "status check"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output.reply }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2768,
+        704
+      ],
+      "id": "0851642c-e997-4d10-b42c-d0f0939f199b",
+      "name": "Send a text message",
+      "webhookId": "0ec2e532-6728-4466-978d-e020a07429f2",
+      "credentials": {
+        "telegramApi": {
+          "id": "YuHs0tUwuGZ0vatW",
+          "name": "Telegram account 9"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Leave request",
+        "formDescription": "Submit your leave details. The result will be sent to your email.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Employee ID",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Leave start date",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Leave end date",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Reason",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false,
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thanks! Check your email for the result."
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -3568,
+        352
+      ],
+      "id": "abce8f2a-0cb8-41a3-bc18-1c49881a6a5a",
+      "name": "On form submission",
+      "webhookId": "e5593a2d-1a4b-4068-8dc1-0b608124a9a0"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5f8142c-9109-4ddf-a365-9880491311af",
+              "name": "emp_id",
+              "value": "={{ ($json.output?.emp_id ?? $json['Employee ID'] ?? '').toString().trim().toUpperCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "977549a8-7ffe-4ae0-b4a8-85bbb9d88a11",
+              "name": "leave_start",
+              "value": "={{ $json.output?.leave_start ?? $json['Leave start date'] }}",
+              "type": "string"
+            },
+            {
+              "id": "64cfc0ca-fc4f-4992-9ffc-4a2ddae526fd",
+              "name": "leave_end",
+              "value": "={{ $json.output?.leave_end ?? $json['Leave end date'] }}",
+              "type": "string"
+            },
+            {
+              "id": "6fdfb150-a5f4-41f0-8e1d-c1ae275c3a1f",
+              "name": "reason",
+              "value": "={{ $json.output?.reason ?? $json['Reason'] }}",
+              "type": "string"
+            },
+            {
+              "id": "90d79948-1908-4e08-9e33-8d2dbb47d151",
+              "name": "channel",
+              "value": "={{ $json.output ? 'telegram' : 'form' }}",
+              "type": "string"
+            },
+            {
+              "id": "6fb291d7-cc9d-4ce5-afb8-7084993159c2",
+              "name": "chat_id",
+              "value": "={{ $json.output ? $('Telegram Trigger').first().json.message.chat.id : '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -2768,
+        496
+      ],
+      "id": "0af968ee-e3ee-40b9-8f88-4ce548a5e393",
+      "name": "Request"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ",
+          "mode": "list",
+          "cachedResultName": "Hr employees Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "employees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "emp_id",
+              "lookupValue": "={{ $json.emp_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2544,
+        496
+      ],
+      "id": "a0996116-ab67-437b-a969-bb3ca4c98fa3",
+      "name": "employees",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0609h0r2LgC3lfnJ",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "92d045a6-2fc3-4093-9b54-a111f1318b6a",
+              "leftValue": "={{ $json.emp_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2336,
+        496
+      ],
+      "id": "aecee168-e808-47f6-a07d-e6e4ffd2f605",
+      "name": "Employee found"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o = $('Request').first().json;\nconst s = new Date(o.leave_start + 'T00:00:00Z');\nconst e = new Date(o.leave_end + 'T00:00:00Z');\nconst days = Math.round((e - s) / 86400000) + 1;\nconst emp = $input.first().json;\nreturn [{ json: { ...o, name: emp.name, team: emp.team, email: emp.email,\n  balance: Number(emp.leave_balance), days, validRange: e >= s } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        464
+      ],
+      "id": "48e7de9f-fb29-4ce4-93d2-e977a090c1f8",
+      "name": "Calculate days"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ca0955f3-9070-4cf5-9acc-3576da6a8041",
+              "leftValue": "={{ $json.validRange }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "1333a139-aef3-40f4-a508-7ddcb0dda399",
+              "leftValue": "={{ $json.balance }}",
+              "rightValue": "={{ $json.days }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1904,
+        464
+      ],
+      "id": "f3453da6-2ca2-4ee6-b113-d2c9b74f58a3",
+      "name": "Balance"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ",
+          "mode": "list",
+          "cachedResultName": "Hr employees Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1069870072,
+          "mode": "list",
+          "cachedResultName": "leave_requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit#gid=1069870072"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "team",
+              "lookupValue": "={{ $json.team }}"
+            },
+            {
+              "lookupColumn": "status",
+              "lookupValue": "Approved"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1696,
+        448
+      ],
+      "id": "ae4ca7f3-16cc-43bc-bf8d-2a63bab13bac",
+      "name": "leave_requests",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0609h0r2LgC3lfnJ",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $('Calculate days').first().json;\nconst cap = 2;\nconst rows = $input.all().map(i => i.json);\nconst clashDates = [];\nfor (let d = new Date(req.leave_start + 'T00:00:00Z');\n     d <= new Date(req.leave_end + 'T00:00:00Z');\n     d.setUTCDate(d.getUTCDate() + 1)) {\n  const day = d.toISOString().slice(0, 10);\n  const count = rows.filter(r => r.start_date <= day && r.end_date >= day).length;\n  if (count >= cap) clashDates.push(day);\n}\nreturn [{ json: { ...req, conflict: clashDates.length > 0, clashDates: clashDates.join(', ') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        448
+      ],
+      "id": "fee16691-5584-4118-8921-8cda4c0f8de4",
+      "name": "clash check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "676f42cc-4708-46d7-93d8-a24c74f07c23",
+              "leftValue": "={{ $json.conflict }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1248,
+        448
+      ],
+      "id": "c219e81d-7b21-46ee-8df7-4ac7b3a39672",
+      "name": "Clash"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ",
+          "mode": "list",
+          "cachedResultName": "Hr employees Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1069870072,
+          "mode": "list",
+          "cachedResultName": "leave_requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit#gid=1069870072"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ String($now.toMillis()) }}",
+            "emp_id": "={{ $json.emp_id }}",
+            "name": "={{ $json.name }}",
+            "team": "={{ $json.team }}",
+            "start_date": "={{ $json.leave_start }}",
+            "end_date": "={{ $json.leave_end }}",
+            "days": "={{ $json.days }}",
+            "reason": "={{ $json.reason }}",
+            "status": "Pending",
+            "chat_id": "={{ $json.chat_id }}",
+            "created_at": "={{ $now.format('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "emp_id",
+              "displayName": "emp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "team",
+              "displayName": "team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "start_date",
+              "displayName": "start_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "end_date",
+              "displayName": "end_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "days",
+              "displayName": "days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1024,
+        464
+      ],
+      "id": "e226a634-4f95-49af-bd89-0ddad4b15abc",
+      "name": "leave_requests1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0609h0r2LgC3lfnJ",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "ebenezer080925@gmail.com",
+        "subject": "=Leave request: {{ $('clash check').first().json.name }}",
+        "message": "=Employee: {{ $('clash check').first().json.name }} ({{ $('clash check').first().json.emp_id }})\nTeam: {{ $('clash check').first().json.team }}\nFrom: {{ $('clash check').first().json.leave_start }}\nTo: {{ $('clash check').first().json.leave_end }}\nDays: {{ $('clash check').first().json.days }}\nReason: {{ $('clash check').first().json.reason }}\nCurrent balance: {{ $('clash check').first().json.balance }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -816,
+        464
+      ],
+      "id": "ca5f719b-cd83-45e3-a6b3-0d70e77ad884",
+      "name": "Send message and wait for response",
+      "webhookId": "4a6f0dfa-ab4b-4590-83f9-d46552eac691",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tjGdErnRaBdlXf3J",
+          "name": "Gmail account 8"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a600b73e-042b-49e0-8625-323cfc42861d",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -608,
+        464
+      ],
+      "id": "a73d3845-540c-41f0-bb6b-dfb2d371c280",
+      "name": "HR Approval"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ",
+          "mode": "list",
+          "cachedResultName": "Hr employees Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1069870072,
+          "mode": "list",
+          "cachedResultName": "leave_requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit#gid=1069870072"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ String($('leave_requests1').first().json.request_id) }}",
+            "status": "Approved"
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -96,
+        -32
+      ],
+      "id": "0951a4dd-4ba5-4cf9-a97c-f68b8afc9bb2",
+      "name": "Approved Leave request",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0609h0r2LgC3lfnJ",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ",
+          "mode": "list",
+          "cachedResultName": "Hr employees Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1069870072,
+          "mode": "list",
+          "cachedResultName": "leave_requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit#gid=1069870072"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "emp_id": "={{ $('clash check').first().json.emp_id }}",
+            "leave_balance": "={{ $('clash check').first().json.balance - $('clash check').first().json.days }}"
+          },
+          "matchingColumns": [
+            "emp_id"
+          ],
+          "schema": [
+            {
+              "id": "emp_id",
+              "displayName": "emp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "leave_balance",
+              "displayName": "leave_balance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -96,
+        144
+      ],
+      "id": "32288dce-4485-4d6b-9eb1-68db6643ee1f",
+      "name": "Approved employees",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0609h0r2LgC3lfnJ",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ",
+          "mode": "list",
+          "cachedResultName": "Hr employees Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1069870072,
+          "mode": "list",
+          "cachedResultName": "leave_requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WGPrhm6o7Znkq3WgXOIfR6R_ZpWhR4eoW5tb86eezAQ/edit#gid=1069870072"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "request_id": "={{ String($('leave_requests1').first().json.request_id) }}",
+            "status": "Rejected"
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -80,
+        880
+      ],
+      "id": "31b31106-4991-471b-b144-19daaf627bbb",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0609h0r2LgC3lfnJ",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "77191862-c506-49b6-9413-1cfa9676955d",
+              "name": "subject",
+              "value": "Leave request: ID not found",
+              "type": "string"
+            },
+            {
+              "id": "72707f45-5fae-4dc7-a8b3-217c9b7f821e",
+              "name": "text",
+              "value": "We couldn't find that employee ID. Please check it and submit again.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -2112,
+        672
+      ],
+      "id": "93bddc50-72fd-42c2-9ad0-b4474f1eba61",
+      "name": "Msg not found"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85b1a538-4580-471e-ae54-bb7fca64d8bd",
+              "name": "subject",
+              "value": "Leave request: not submitted",
+              "type": "string"
+            },
+            {
+              "id": "0738f0cc-8b8b-49f6-9ea3-23477c056f2d",
+              "name": "text",
+              "value": "Your dates are invalid or exceed your leave balance.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1696,
+        656
+      ],
+      "id": "76ec886f-0d29-4507-b9d4-15f4b185003e",
+      "name": "Msg invalid"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "54040fc4-e2fc-49e4-8af7-8c967de43e76",
+              "name": "subject",
+              "value": "Leave request: not approved",
+              "type": "string"
+            },
+            {
+              "id": "5a9cee67-764e-4315-befc-3eab10edd922",
+              "name": "text",
+              "value": "=Sorry, your leave isn't approved. Too many people in your team are already off on: {{ $json.clashDates }}. Please pick different dates.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -816,
+        96
+      ],
+      "id": "8dd79631-b5ba-4783-a5e0-2493565a1b19",
+      "name": "Msg clash"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8e6285e1-b7b5-473d-abce-c8115129d60c",
+              "name": "subject",
+              "value": "Leave request submitted",
+              "type": "string"
+            },
+            {
+              "id": "9d22997f-dea4-4035-b5a0-23792e774011",
+              "name": "text",
+              "value": "Your leave request has been submitted and is awaiting HR approval.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -816,
+        288
+      ],
+      "id": "e907488d-1800-4c60-8e35-c9a30a83aff1",
+      "name": "Msg submitted"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "69583b6f-b567-484f-930b-300fc2008b84",
+              "name": "subject",
+              "value": "Leave request approved",
+              "type": "string"
+            },
+            {
+              "id": "b219dd60-5afe-46ce-bfee-f1afaa0667a5",
+              "name": "text",
+              "value": "=Good news! Your leave from {{ $('clash check').first().json.leave_start }} to {{ $('clash check').first().json.leave_end }} has been approved.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -96,
+        304
+      ],
+      "id": "44e75b35-ceae-4279-96b6-0933b1bb4dc4",
+      "name": "Msg approved"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "475ad63f-8ab7-413e-8d2d-be9e9c3bef77",
+              "name": "subject",
+              "value": "Leave request not approved",
+              "type": "string"
+            },
+            {
+              "id": "10ac3c91-b6fa-4ce1-b5ee-e054e761441d",
+              "name": "text",
+              "value": "Your leave request was not approved by HR. Please contact HR if you have questions.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -96,
+        640
+      ],
+      "id": "d646615d-a3ec-45a8-aa74-8ee3a09464f5",
+      "name": "Msg rejected"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b54224cf-7fae-4f50-93d2-afed34febf02",
+              "leftValue": "={{ $('Request').first().json.channel }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        480
+      ],
+      "id": "800c0e28-9579-46f4-851d-af5fc4e48df0",
+      "name": "Channel"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Request').first().json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        304
+      ],
+      "id": "9614c120-84eb-45a8-a8a1-835c923b7956",
+      "name": "Notify Telegram",
+      "webhookId": "e714fab4-ae49-497b-9c0d-b377f79f8992",
+      "credentials": {
+        "telegramApi": {
+          "id": "YuHs0tUwuGZ0vatW",
+          "name": "Telegram account 9"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Request').first().json.Email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        688
+      ],
+      "id": "af1c5395-7a02-4b3c-86d9-9e767ba64573",
+      "name": "Send a message",
+      "webhookId": "e2e8cc0f-ad11-4def-aa22-fedf71dd0f31",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tjGdErnRaBdlXf3J",
+          "name": "Gmail account 8"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "status check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "status check": {
+      "main": [
+        [
+          {
+            "node": "Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request": {
+      "main": [
+        [
+          {
+            "node": "employees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "employees": {
+      "main": [
+        [
+          {
+            "node": "Employee found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Employee found": {
+      "main": [
+        [
+          {
+            "node": "Calculate days",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Msg not found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate days": {
+      "main": [
+        [
+          {
+            "node": "Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Balance": {
+      "main": [
+        [
+          {
+            "node": "leave_requests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Msg invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "leave_requests": {
+      "main": [
+        [
+          {
+            "node": "clash check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "clash check": {
+      "main": [
+        [
+          {
+            "node": "Clash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clash": {
+      "main": [
+        [
+          {
+            "node": "Msg clash",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "leave_requests1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "leave_requests1": {
+      "main": [
+        [
+          {
+            "node": "Msg submitted",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "HR Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HR Approval": {
+      "main": [
+        [
+          {
+            "node": "Approved Leave request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Approved employees",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Msg approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Msg rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg not found": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg invalid": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg clash": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg submitted": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg approved": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Msg rejected": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Channel": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "9c04e1b4-5a8f-4d30-888d-0007a957ef19",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "102319d8e8aa4c5eb93b0a606e725efcc7eb7ae75b65d4cccc985ad7817d0cb4"
+  },
+  "nodeGroups": [],
+  "id": "Kb2br3kKUbTSE3nI",
+  "tags": []
+}
